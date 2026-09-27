@@ -18,6 +18,9 @@ Java 21, Spring Boot 3, Maven, LangChain4j, JUnit 5, base H2 en mémoire, interf
 - Si la réponse du modèle est invalide ou si la confiance est sous le seuil, le ticket part dans la file de validation humaine.
 - Pas de déploiement cloud, pas de watsonx.ai, pas d'orchestration multi-agents.
 - Le code le plus simple possible : chaque classe doit pouvoir s'expliquer en une phrase.
+- Les catégories forment une liste fermée (enum Java), et le prompt donne une définition courte de chacune.
+- L'équipe de destination n'est jamais choisie par le modèle : elle est déduite de la catégorie par une table de correspondance en Java.
+- Le prompt contient deux ou trois exemples de tickets déjà classés, pour guider un petit modèle.
 
 ## Interdits
 - Aucun secret dans le dépôt.
