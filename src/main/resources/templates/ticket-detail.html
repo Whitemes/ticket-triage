@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Détail du ticket</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        table { border-collapse: collapse; width: 100%; }
+        td, th { border: 1px solid #ccc; padding: 0.4rem 0.8rem; text-align: left; }
+        nav a { margin-right: 1rem; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/">Soumettre un ticket</a>
+    <a href="/human-queue">File humaine</a>
+</nav>
+<hr/>
+<h1>Détail — Ticket #<span th:text="${ticket.id}"></span></h1>
+
+<table>
+    <tr><th>Statut</th><td th:text="${ticket.status}"></td></tr>
+    <tr><th>Catégorie</th><td th:text="${ticket.category}"></td></tr>
+    <tr><th>Priorité</th><td th:text="${ticket.priority}"></td></tr>
+    <tr><th>Équipe</th><td th:text="${ticket.team}"></td></tr>
+    <tr><th>Résumé</th><td th:text="${ticket.summary}"></td></tr>
+    <tr><th>Justification</th><td th:text="${ticket.justification}"></td></tr>
+    <tr><th>Confiance</th><td th:text="${#numbers.formatDecimal(ticket.confidence, 1, 2)}"></td></tr>
+    <tr><th>Texte original</th><td th:text="${ticket.rawText}"></td></tr>
+    <tr><th>Créé le</th><td th:text="${ticket.createdAt}"></td></tr>
+</table>
+
+<p><a href="/">← Retour à l'accueil</a></p>
+</body>
+</html>

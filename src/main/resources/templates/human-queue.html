@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>File de validation humaine</title>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 2rem; }
+        td, th { border: 1px solid #ccc; padding: 0.4rem 0.7rem; text-align: left; }
+        select { padding: 0.2rem; }
+        button { padding: 0.3rem 1rem; }
+        nav a { margin-right: 1rem; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/">Soumettre un ticket</a>
+    <a href="/human-queue">File humaine</a>
+</nav>
+<hr/>
+<h1>File de validation humaine</h1>
+
+<p th:if="${#lists.isEmpty(tickets)}">Aucun ticket en attente. ✓</p>
+
+<div th:each="ticket : ${tickets}">
+    <h3>Ticket #<span th:text="${ticket.id}"></span>
+        — <em th:text="${ticket.category}"></em>
+        — <em th:text="${ticket.priority}"></em>
+        (confiance : <span th:text="${#numbers.formatDecimal(ticket.confidence, 1, 2)}"></span>)
+    </h3>
+    <p th:text="${ticket.rawText}"></p>
+    <p><strong>Résumé :</strong> <span th:text="${ticket.summary}"></span></p>
+    <p><strong>Justification :</strong> <span th:text="${ticket.justification}"></span></p>
+
+    <form th:action="@{'/human-queue/' + ${ticket.id} + '/validate'}" method="post">
+        <label>Catégorie :
+            <select name="category">
+                <option th:each="cat : ${categories}"
+                        th:value="${cat}"
+                        th:text="${cat}"
+                        th:selected="${cat == ticket.category}"></option>
+            </select>
+        </label>
+        &nbsp;
+        <label>Priorité :
+            <select name="priority">
+                <option th:each="prio : ${priorities}"
+                        th:value="${prio}"
+                        th:text="${prio}"
+                        th:selected="${prio == ticket.priority}"></option>
+            </select>
+        </label>
+        &nbsp;
+        <button type="submit">Valider</button>
+    </form>
+    <hr/>
+</div>
+</body>
+</html>

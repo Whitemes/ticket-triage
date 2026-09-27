@@ -28,3 +28,8 @@ Java 21, Spring Boot 3, Maven, LangChain4j, JUnit 5, base H2 en mémoire, interf
 
 ## Définition de « terminé » pour chaque phase
 Le code compile, les tests passent (mvn verify), l'application démarre, un commit clair est fait.
+
+## Git
+- Une branche par phase, créée depuis main : phase-1-coeur, phase-2-granite, phase-3-readme.
+- Des commits courts et clairs au fil de la phase.
+- À la fin d'une phase, quand mvn verify passe : push de la branche, puis fusion dans main.
