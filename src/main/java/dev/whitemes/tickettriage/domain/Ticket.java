@@ -15,6 +15,9 @@ public class Ticket {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String rawText;
 
+    @Column(columnDefinition = "TEXT")
+    private String maskedText;
+
     @Enumerated(EnumType.STRING)
     private Category category;
 
@@ -51,6 +54,9 @@ public class Ticket {
 
     public String getRawText() { return rawText; }
     public void setRawText(String rawText) { this.rawText = rawText; }
+
+    public String getMaskedText() { return maskedText; }
+    public void setMaskedText(String maskedText) { this.maskedText = maskedText; }
 
     public Category getCategory() { return category; }
     public void setCategory(Category category) { this.category = category; }

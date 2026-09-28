@@ -77,4 +77,28 @@
         </plugins>
     </build>
 
+    <profiles>
+        <!-- Run live integration tests against a real Ollama instance:
+             set OLLAMA_IT=true, then: mvn test -Pollama-live -->
+        <profile>
+            <id>ollama-live</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/*IT.java</include>
+                            </includes>
+                            <excludedGroups/>
+                            <groups>ollama-live</groups>
+                            <excludedGroups combine.self="override"/>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>

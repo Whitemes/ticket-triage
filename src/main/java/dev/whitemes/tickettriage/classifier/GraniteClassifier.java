@@ -11,6 +11,7 @@ import dev.whitemes.tickettriage.domain.Category;
 import dev.whitemes.tickettriage.domain.Priority;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -78,6 +79,7 @@ public class GraniteClassifier implements TicketClassifier {
     private final ChatLanguageModel chatModel;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Autowired
     public GraniteClassifier(
             PersonalDataMasker masker,
             @Value("${ollama.base-url:http://localhost:11434}") String baseUrl,
