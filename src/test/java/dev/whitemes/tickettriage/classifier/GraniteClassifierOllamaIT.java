@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * by the Surefire configuration in {@code pom.xml}. It is meant to be run manually before a demo:
  *
  * <pre>
- *   OLLAMA_IT=true mvn test -Dgroups=ollama-live
+ *   $env:OLLAMA_IT='true'; mvn test -Pollama-live      (Windows PowerShell)
  * </pre>
  *
  * <p>The test skips automatically (via {@link Assumptions#assumeTrue}) when the
