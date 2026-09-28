@@ -1,6 +1,7 @@
 package dev.whitemes.tickettriage.service;
 
 import dev.whitemes.tickettriage.classifier.ClassificationResult;
+import dev.whitemes.tickettriage.classifier.PersonalDataMasker;
 import dev.whitemes.tickettriage.classifier.TicketClassifier;
 import dev.whitemes.tickettriage.domain.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,13 +27,14 @@ class TicketServiceTest {
     private TicketRepository repository;
 
     private final TeamRouter teamRouter = new TeamRouter();
+    private final PersonalDataMasker masker = new PersonalDataMasker();
 
     private TicketService service;
 
     @BeforeEach
     void setUp() {
         // threshold = 0.7
-        service = new TicketService(classifier, repository, teamRouter, 0.7);
+        service = new TicketService(classifier, masker, repository, teamRouter, 0.7);
     }
 
     @Test
@@ -70,6 +72,20 @@ class TicketServiceTest {
         Ticket ticket = service.submit("Crash application");
 
         assertThat(ticket.getStatus()).isEqualTo(TicketStatus.ROUTED);
+    }
+
+    @Test
+    void criticalTicketIsAlwaysPendingHumanEvenWithHighConfidence() {
+        when(classifier.classify(any())).thenReturn(
+                new ClassificationResult(Category.SECURITY, Priority.CRITICAL,
+                        "Intrusion détectée", "Violation de sécurité en cours.", 0.99));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Ticket ticket = service.submit("Ransomware détecté sur le poste de travail.");
+
+        assertThat(ticket.getStatus())
+                .as("CRITICAL tickets must always go to human review, regardless of confidence")
+                .isEqualTo(TicketStatus.PENDING_HUMAN);
     }
 
     @Test

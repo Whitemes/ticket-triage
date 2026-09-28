@@ -27,6 +27,7 @@
     <tr><th>Justification</th><td th:text="${ticket.justification}"></td></tr>
     <tr><th>Confiance</th><td th:text="${#numbers.formatDecimal(ticket.confidence, 1, 2)}"></td></tr>
     <tr><th>Texte original</th><td th:text="${ticket.rawText}"></td></tr>
+    <tr><th>Texte envoyé au modèle</th><td th:text="${ticket.maskedText}"></td></tr>
     <tr><th>Créé le</th><td th:text="${ticket.createdAt}"></td></tr>
 </table>
 
