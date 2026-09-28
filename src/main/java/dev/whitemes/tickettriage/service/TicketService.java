@@ -4,6 +4,8 @@ import dev.whitemes.tickettriage.classifier.ClassificationResult;
 import dev.whitemes.tickettriage.classifier.PersonalDataMasker;
 import dev.whitemes.tickettriage.classifier.TicketClassifier;
 import dev.whitemes.tickettriage.domain.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +19,15 @@ import java.util.List;
 @Service
 @Transactional
 public class TicketService {
+
+    private static final Logger log = LoggerFactory.getLogger(TicketService.class);
+
+    /** Used when the classifier fails or returns an invalid result: always sent to the human queue. */
+    private static final ClassificationResult FALLBACK = new ClassificationResult(
+            Category.OTHER, Priority.MEDIUM,
+            "Classification automatique indisponible.",
+            "Modèle injoignable ou réponse invalide : qualification par un agent requise.",
+            0.0);
 
     private final TicketClassifier classifier;
     private final PersonalDataMasker masker;
@@ -40,11 +51,12 @@ public class TicketService {
      * Submits a raw ticket text, classifies it, and persists it.
      * Status is {@link TicketStatus#ROUTED} when confidence ≥ threshold,
      * {@link TicketStatus#PENDING_HUMAN} otherwise.
-     * CRITICAL tickets always go to {@link TicketStatus#PENDING_HUMAN} for human oversight.
+     * CRITICAL tickets always go to {@link TicketStatus#PENDING_HUMAN} for human oversight,
+     * and so do tickets whose classification failed or was invalid.
      */
     public Ticket submit(String rawText) {
         String masked = masker.mask(rawText);
-        ClassificationResult result = classifier.classify(masked);
+        ClassificationResult result = classifySafely(masked);
 
         Ticket ticket = new Ticket();
         ticket.setRawText(rawText);
@@ -56,14 +68,36 @@ public class TicketService {
         ticket.setConfidence(result.confidence());
         ticket.setTeam(teamRouter.route(result.category()));
 
+        boolean unavailable = result == FALLBACK;
         boolean critical = result.priority() == Priority.CRITICAL;
-        if (!critical && result.confidence() >= confidenceThreshold) {
+        if (!unavailable && !critical && result.confidence() >= confidenceThreshold) {
             ticket.setStatus(TicketStatus.ROUTED);
         } else {
             ticket.setStatus(TicketStatus.PENDING_HUMAN);
         }
 
         return repository.save(ticket);
+    }
+
+    /**
+     * Calls the classifier and returns {@link #FALLBACK} instead of failing when the model is
+     * unreachable, times out, or returns an invalid result. Only the error type is logged,
+     * never the ticket text.
+     */
+    private ClassificationResult classifySafely(String masked) {
+        try {
+            ClassificationResult result = classifier.classify(masked);
+            if (result != null && result.category() != null && result.priority() != null
+                    && result.confidence() >= 0.0 && result.confidence() <= 1.0) {
+                return result;
+            }
+            log.warn("Invalid classification result, ticket sent to the human queue");
+        } catch (RuntimeException e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            log.warn("Classification failed ({}), ticket sent to the human queue",
+                    cause.getClass().getSimpleName());
+        }
+        return FALLBACK;
     }
 
     /** Returns all tickets awaiting human review. */

@@ -102,6 +102,9 @@ public class GraniteClassifier implements TicketClassifier {
                 .baseUrl(baseUrl)
                 .modelName(modelName)
                 .timeout(Duration.ofSeconds(timeoutSeconds))
+                // LangChain4j counts maxRetries as the TOTAL number of attempts (default 3).
+                // One attempt only: on failure the ticket goes to the human queue instead.
+                .maxRetries(1)
                 .build();
     }
 
