@@ -1,6 +1,7 @@
 package dev.whitemes.tickettriage.classifier;
 
 import dev.whitemes.tickettriage.domain.Category;
+import dev.whitemes.tickettriage.domain.Priority;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,6 +37,22 @@ class FakeClassifierTest {
         ClassificationResult result = classifier.classify("Je n'arrive plus à changer mon mot de passe");
         assertThat(result.category()).isEqualTo(Category.ACCESS);
         assertThat(result.confidence()).isGreaterThanOrEqualTo(0.7);
+    }
+
+    @Test
+    void securityKeywordWinsOverNetwork() {
+        ClassificationResult result = classifier.classify(
+                "Ransomware détecté : un virus chiffre les fichiers du partage réseau");
+        assertThat(result.category()).isEqualTo(Category.SECURITY);
+        assertThat(result.priority()).isEqualTo(Priority.CRITICAL);
+    }
+
+    @Test
+    void phishingWithPasswordIsSecurity() {
+        ClassificationResult result = classifier.classify(
+                "Phishing : un faux mail m'a demandé mon mot de passe");
+        assertThat(result.category()).isEqualTo(Category.SECURITY);
+        assertThat(result.priority()).isEqualTo(Priority.CRITICAL);
     }
 
     @Test
