@@ -17,10 +17,19 @@
 </nav>
 <hr/>
 <h1>Soumettre un ticket de support</h1>
-<form th:action="@{/tickets}" method="post">
+<form id="ticket-form" th:action="@{/tickets}" method="post"
+      onsubmit="this.querySelector('button').disabled = true; document.getElementById('attente').hidden = false;">
     <label for="rawText"><strong>Description du problème :</strong></label><br/>
     <textarea id="rawText" name="rawText" required placeholder="Décrivez votre problème…"></textarea><br/>
     <button type="submit">Envoyer</button>
+    <p id="attente" hidden>Classification en cours…</p>
 </form>
+<script>
+    // Back/forward cache restores the page as it was left: re-enable the form.
+    window.addEventListener('pageshow', function () {
+        document.querySelector('#ticket-form button').disabled = false;
+        document.getElementById('attente').hidden = true;
+    });
+</script>
 </body>
 </html>
