@@ -9,8 +9,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.ClassUtils;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Orchestrates the ticket triage flow:
@@ -56,7 +58,14 @@ public class TicketService {
      */
     public Ticket submit(String rawText) {
         String masked = masker.mask(rawText);
+        log.info("[TRIAGE] Classifieur {} | texte masqué envoyé : {}",
+                ClassUtils.getUserClass(classifier).getSimpleName(), masked);
+
+        long start = System.nanoTime();
         ClassificationResult result = classifySafely(masked);
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+        log.info("[TRIAGE] Résultat en {} ms : catégorie={}, priorité={}, confiance={}",
+                elapsedMs, result.category(), result.priority(), result.confidence());
 
         Ticket ticket = new Ticket();
         ticket.setRawText(rawText);
@@ -68,15 +77,31 @@ public class TicketService {
         ticket.setConfidence(result.confidence());
         ticket.setTeam(teamRouter.route(result.category()));
 
-        boolean unavailable = result == FALLBACK;
-        boolean critical = result.priority() == Priority.CRITICAL;
-        if (!unavailable && !critical && result.confidence() >= confidenceThreshold) {
-            ticket.setStatus(TicketStatus.ROUTED);
-        } else {
+        Optional<String> humanReviewReason = humanReviewReason(result);
+        if (humanReviewReason.isPresent()) {
             ticket.setStatus(TicketStatus.PENDING_HUMAN);
+            log.info("[TRIAGE] Décision : file humaine ({})", humanReviewReason.get());
+        } else {
+            ticket.setStatus(TicketStatus.ROUTED);
+            log.info("[TRIAGE] Décision : routé vers {} (confiance {} ≥ seuil {})",
+                    ticket.getTeam(), result.confidence(), confidenceThreshold);
         }
 
         return repository.save(ticket);
+    }
+
+    /** Returns why the ticket must be reviewed by a human, or empty when it can be routed. */
+    private Optional<String> humanReviewReason(ClassificationResult result) {
+        if (result == FALLBACK) {
+            return Optional.of("classification indisponible");
+        }
+        if (result.priority() == Priority.CRITICAL) {
+            return Optional.of("priorité CRITICAL");
+        }
+        if (result.confidence() < confidenceThreshold) {
+            return Optional.of("confiance " + result.confidence() + " sous le seuil " + confidenceThreshold);
+        }
+        return Optional.empty();
     }
 
     /**
@@ -91,10 +116,10 @@ public class TicketService {
                     && result.confidence() >= 0.0 && result.confidence() <= 1.0) {
                 return result;
             }
-            log.warn("Invalid classification result, ticket sent to the human queue");
+            log.warn("[TRIAGE] Résultat de classification invalide : passage en file humaine");
         } catch (RuntimeException e) {
             Throwable cause = e.getCause() != null ? e.getCause() : e;
-            log.warn("Classification failed ({}), ticket sent to the human queue",
+            log.warn("[TRIAGE] Classification indisponible ({}) : passage en file humaine",
                     cause.getClass().getSimpleName());
         }
         return FALLBACK;
