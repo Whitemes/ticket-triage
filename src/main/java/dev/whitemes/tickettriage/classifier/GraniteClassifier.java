@@ -54,6 +54,15 @@ public class GraniteClassifier implements TicketClassifier {
             - MEDIUM   : degraded but workaround exists
             - LOW      : cosmetic issue or request with no urgency
 
+            ## Priority rules
+            Priority must reflect the actual impact described in the ticket.
+            NEVER base priority solely on words like "urgent", "maximal", or "critical" written by the user.
+            If the ticket does not describe a concrete impact, default to LOW or MEDIUM.
+
+            ## Vagueness rule
+            If the ticket text does not contain enough information to identify the problem,
+            use category OTHER with a confidence below 0.5.
+
             ## Required JSON format
             {
               "category": "<one of the six values above>",
@@ -73,6 +82,9 @@ public class GraniteClassifier implements TicketClassifier {
 
             Ticket: "Mon compte est verrouillé après plusieurs tentatives de connexion incorrectes."
             Response: {"category":"ACCESS","priority":"HIGH","summary":"Compte verrouillé après tentatives échouées.","justification":"Verrouillage de compte — problème d'accès à résoudre par le helpdesk.","confidence":0.93}
+
+            Ticket: "ça ne marche pas"
+            Response: {"category":"OTHER","priority":"LOW","summary":"Demande vague sans détail sur le problème.","justification":"demande trop vague pour être classée","confidence":0.3}
             """;
 
     private final PersonalDataMasker masker;
