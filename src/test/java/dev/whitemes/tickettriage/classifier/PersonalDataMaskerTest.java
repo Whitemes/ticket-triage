@@ -50,10 +50,21 @@ class PersonalDataMaskerTest {
     // --- IBAN ---
 
     @Test
-    void iban_is_replaced_by_marker() {
+    void iban_compact_is_replaced_by_marker() {
         // Synthetic FR IBAN (not a real account)
         String result = masker.mask("Mon IBAN est FR7614508059050000000000000.");
         assertThat(result).doesNotContain("FR7614508059050000000000000")
+                .contains("[IBAN]");
+    }
+
+    @Test
+    void iban_spaced_is_replaced_and_no_digit_leaks_to_model() {
+        // Synthetic spaced FR IBAN — format used by most French banks
+        String spaced = "FR76 3000 6000 0112 3456 7890 189";
+        String result = masker.mask("Voici mon IBAN : " + spaced + " merci.");
+        assertThat(result)
+                .as("aucun chiffre de l'IBAN ne doit subsister dans le texte masqué")
+                .doesNotContainPattern("3000|6000|0112|3456|7890|189")
                 .contains("[IBAN]");
     }
 

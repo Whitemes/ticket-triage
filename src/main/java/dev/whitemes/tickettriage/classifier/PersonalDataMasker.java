@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 
 /**
  * Masks personal data (e-mail, phone, IBAN) in ticket text before it is sent to the model.
- * Applies replacements in order: e-mail → phone → IBAN.
+ * Applies replacements in order: e-mail → IBAN → phone.
  */
 @Component
 public class PersonalDataMasker {
@@ -21,13 +21,17 @@ public class PersonalDataMasker {
             "(?:(?:\\+33|0033)[\\s.\\-]?[1-9]|0[1-9])" +
             "(?:[\\s.\\-]?\\d{2}){4}");
 
-    // IBAN: 2 letters + 2 digits + up to 30 alphanumeric chars (spaced or compact)
+    // IBAN: 2 letters + 2 digits, followed by 11 to 30 alphanumeric characters.
+    // Spaces (or hyphens) between groups are allowed — e.g. "FR76 3000 6000 0112 3456 7890 189".
+    // Matched before phone to prevent the phone pattern from consuming IBAN digits.
     private static final Pattern IBAN = Pattern.compile(
-            "[A-Z]{2}\\d{2}[A-Z0-9]{4,30}(?:[\\s\\-][A-Z0-9]{4})*",
+            "[A-Z]{2}\\d{2}[ \\-]?(?:[A-Z0-9]+[ \\-]?){2,9}[A-Z0-9]+",
             Pattern.CASE_INSENSITIVE);
 
     /**
      * Returns a copy of {@code text} with all personal data replaced by neutral markers.
+     * Order: e-mail first, then IBAN (before phone so IBAN digits are not partially consumed),
+     * then phone.
      *
      * @param text raw ticket text (may be null)
      * @return masked text, or empty string if input is null
