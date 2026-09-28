@@ -70,7 +70,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <!-- Tests tagged "ollama-live" require a running Ollama instance:
-                         run with OLLAMA_IT=true mvn test -Dgroups=ollama-live -->
+                         run them with the ollama-live profile below (OLLAMA_IT=true, mvn test -Pollama-live) -->
                     <excludedGroups>ollama-live</excludedGroups>
                 </configuration>
             </plugin>
