@@ -21,12 +21,13 @@ public class PersonalDataMasker {
             "(?:(?:\\+33|0033)[\\s.\\-]?[1-9]|0[1-9])" +
             "(?:[\\s.\\-]?\\d{2}){4}");
 
-    // IBAN: 2 letters + 2 digits, followed by 11 to 30 alphanumeric characters.
-    // Spaces (or hyphens) between groups are allowed — e.g. "FR76 3000 6000 0112 3456 7890 189".
-    // Matched before phone to prevent the phone pattern from consuming IBAN digits.
+    // IBAN: 2 upper-case letters + 2 digits, then 2 to 7 blocks of 4 characters and an optional
+    // 1-3 character remainder, blocks optionally separated by a space or a hyphen —
+    // e.g. "FR76 3000 6000 0112 3456 7890 189" or "DE89370400440532013000".
+    // Case-sensitive with word boundaries so IT codes such as SRV01, PC75, KB5034441 or Office365
+    // are left intact. Matched before phone to prevent the phone pattern from consuming IBAN digits.
     private static final Pattern IBAN = Pattern.compile(
-            "[A-Z]{2}\\d{2}[ \\-]?(?:[A-Z0-9]+[ \\-]?){2,9}[A-Z0-9]+",
-            Pattern.CASE_INSENSITIVE);
+            "\\b[A-Z]{2}\\d{2}(?:[ \\-]?[A-Z0-9]{4}){2,7}(?:[ \\-]?[A-Z0-9]{1,3})?\\b");
 
     /**
      * Returns a copy of {@code text} with all personal data replaced by neutral markers.

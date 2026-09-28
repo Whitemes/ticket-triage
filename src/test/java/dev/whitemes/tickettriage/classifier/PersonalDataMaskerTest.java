@@ -2,6 +2,8 @@ package dev.whitemes.tickettriage.classifier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -68,11 +70,30 @@ class PersonalDataMaskerTest {
                 .contains("[IBAN]");
     }
 
+    @Test
+    void spaced_iban_is_replaced_and_surrounding_text_is_kept() {
+        assertThat(masker.mask("Voici mon IBAN : FR76 3000 6000 0112 3456 7890 189 merci."))
+                .isEqualTo("Voici mon IBAN : [IBAN] merci.");
+    }
+
     // --- No personal data ---
 
     @Test
     void text_without_personal_data_is_returned_unchanged() {
         String text = "Mon imprimante HP ne fonctionne plus depuis la mise à jour.";
+        assertThat(masker.mask(text)).isEqualTo(text);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Le serveur SRV01 ne répond plus",
+            "Mon poste PC75 ne se connecte plus au VPN",
+            "Suite à la mise à jour KB5034441 le VPN ne marche plus",
+            "Ticket INC0012345 toujours pas résolu",
+            "Office365 plante au démarrage",
+            "Win11 ne démarre plus"
+    })
+    void technical_codes_are_not_masked(String text) {
         assertThat(masker.mask(text)).isEqualTo(text);
     }
 

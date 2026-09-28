@@ -89,6 +89,35 @@ class TicketServiceTest {
     }
 
     @Test
+    void classifierFailureSendsTicketToHumanQueue() {
+        when(classifier.classify(any())).thenThrow(
+                new RuntimeException(new java.net.ConnectException("Connection refused")));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Ticket ticket = service.submit("Impossible d'ouvrir le logiciel de crédit");
+
+        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.PENDING_HUMAN);
+        assertThat(ticket.getCategory()).isEqualTo(Category.OTHER);
+        assertThat(ticket.getPriority()).isEqualTo(Priority.MEDIUM);
+        assertThat(ticket.getConfidence()).isZero();
+        assertThat(ticket.getRawText()).isEqualTo("Impossible d'ouvrir le logiciel de crédit");
+        verify(repository).save(any(Ticket.class));
+    }
+
+    @Test
+    void outOfRangeConfidenceSendsTicketToHumanQueue() {
+        when(classifier.classify(any())).thenReturn(
+                new ClassificationResult(Category.NETWORK, Priority.LOW,
+                        "Summary", "Justification", 95.0));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Ticket ticket = service.submit("Le Wi-Fi coupe toutes les 5 minutes");
+
+        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.PENDING_HUMAN);
+        verify(repository).save(any(Ticket.class));
+    }
+
+    @Test
     void validateUpdatesTicketToValidated() {
         Ticket existing = new Ticket();
         existing.setId(1L);

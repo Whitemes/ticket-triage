@@ -23,7 +23,7 @@
 <p th:if="${#lists.isEmpty(tickets)}">Aucun ticket en attente. ✓</p>
 
 <div th:each="ticket : ${tickets}">
-    <h3>Ticket #<span th:text="${ticket.id}"></span>
+    <h3><a th:href="@{/tickets/{id}(id=${ticket.id})}">Ticket #<span th:text="${ticket.id}"></span></a>
         — <em th:text="${ticket.category}"></em>
         — <em th:text="${ticket.priority}"></em>
         (confiance : <span th:text="${#numbers.formatDecimal(ticket.confidence, 1, 2)}"></span>)

@@ -102,6 +102,9 @@ public class GraniteClassifier implements TicketClassifier {
                 .baseUrl(baseUrl)
                 .modelName(modelName)
                 .timeout(Duration.ofSeconds(timeoutSeconds))
+                // LangChain4j counts maxRetries as the TOTAL number of attempts (default 3).
+                // One attempt only: on failure the ticket goes to the human queue instead.
+                .maxRetries(1)
                 .build();
     }
 
@@ -114,13 +117,14 @@ public class GraniteClassifier implements TicketClassifier {
     @Override
     public ClassificationResult classify(String text) {
         String masked = masker.mask(text);
-        log.debug("Sending masked ticket to Ollama (length={})", masked.length());
 
+        long start = System.nanoTime();
         Response<AiMessage> response = chatModel.generate(
                 List.of(SystemMessage.from(SYSTEM_PROMPT), UserMessage.from(masked)));
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000;
 
         String json = response.content().text().strip();
-        log.debug("Ollama response: {}", json);
+        log.info("[TRIAGE] Réponse brute du modèle en {} ms : {}", elapsedMs, json);
 
         return parseResult(json);
     }

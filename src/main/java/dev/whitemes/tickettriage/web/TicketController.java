@@ -47,12 +47,12 @@ public class TicketController {
         return "human-queue";
     }
 
-    /** Validates (and optionally corrects) a ticket from the human queue. */
+    /** Validates (and optionally corrects) a ticket from the human queue, then shows the updated ticket. */
     @PostMapping("/human-queue/{id}/validate")
     public String validate(@PathVariable Long id,
                            @RequestParam Category category,
                            @RequestParam Priority priority) {
         ticketService.validate(id, category, priority);
-        return "redirect:/human-queue";
+        return "redirect:/tickets/" + id;
     }
 }
