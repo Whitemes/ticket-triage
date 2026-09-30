@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @ConditionalOnProperty(name = "classifier.type", havingValue = "fake", matchIfMissing = true)
-public class FakeClassifier implements TicketClassifier {
+public final class FakeClassifier implements TicketClassifier {
 
     @Override
     public ClassificationResult classify(String text) {

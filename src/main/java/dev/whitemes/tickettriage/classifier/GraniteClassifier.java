@@ -26,7 +26,7 @@ import java.util.List;
  */
 @Service
 @ConditionalOnProperty(name = "classifier.type", havingValue = "granite")
-public class GraniteClassifier implements TicketClassifier {
+public final class GraniteClassifier implements TicketClassifier {
 
     private static final Logger log = LoggerFactory.getLogger(GraniteClassifier.class);
 
@@ -112,8 +112,11 @@ public class GraniteClassifier implements TicketClassifier {
                 .build();
     }
 
-    /** Package-visible constructor for testing: accepts a stubbed {@link ChatLanguageModel}. */
-    GraniteClassifier(PersonalDataMasker masker, ClassificationResultParser parser, ChatLanguageModel chatModel) {
+    /**
+     * Builds the classifier on any LangChain4j {@link ChatLanguageModel}. Used by tests with a stubbed
+     * model: {@link TicketClassifier} is sealed, so tests exercise this real implementation instead of a mock.
+     */
+    public GraniteClassifier(PersonalDataMasker masker, ClassificationResultParser parser, ChatLanguageModel chatModel) {
         this.masker = masker;
         this.parser = parser;
         this.chatModel = chatModel;

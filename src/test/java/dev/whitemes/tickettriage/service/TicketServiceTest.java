@@ -1,8 +1,11 @@
 package dev.whitemes.tickettriage.service;
 
-import dev.whitemes.tickettriage.classifier.ClassificationResult;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.output.Response;
+import dev.whitemes.tickettriage.classifier.ClassificationResultParser;
+import dev.whitemes.tickettriage.classifier.GraniteClassifier;
 import dev.whitemes.tickettriage.classifier.PersonalDataMasker;
-import dev.whitemes.tickettriage.classifier.TicketClassifier;
 import dev.whitemes.tickettriage.domain.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,14 +17,18 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
-/** Unit tests for TicketService — TicketClassifier is mocked. */
+/**
+ * Unit tests for TicketService. {@code TicketClassifier} is sealed and cannot be mocked: the service
+ * runs with the real {@link GraniteClassifier}, whose LangChain4j chat model is stubbed.
+ */
 @ExtendWith(MockitoExtension.class)
 class TicketServiceTest {
 
     @Mock
-    private TicketClassifier classifier;
+    private ChatLanguageModel chatModel;
 
     @Mock
     private TicketRepository repository;
@@ -33,16 +40,15 @@ class TicketServiceTest {
 
     @BeforeEach
     void setUp() {
+        var classifier = new GraniteClassifier(masker, new ClassificationResultParser(), chatModel);
         // threshold = 0.7
         service = new TicketService(classifier, masker, repository, teamRouter, 0.7);
     }
 
     @Test
     void highConfidenceTicketIsRouted() {
-        when(classifier.classify(any())).thenReturn(
-                new ClassificationResult(Category.NETWORK, Priority.HIGH,
-                        "Summary", "Justification", 0.9));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        givenModelAnswers("NETWORK", "HIGH", "0.9");
+        givenRepositorySavesTickets();
 
         Ticket ticket = service.submit("Mon vpn ne fonctionne pas");
 
@@ -52,10 +58,8 @@ class TicketServiceTest {
 
     @Test
     void lowConfidenceTicketIsPendingHuman() {
-        when(classifier.classify(any())).thenReturn(
-                new ClassificationResult(Category.OTHER, Priority.LOW,
-                        "Summary", "Justification", 0.4));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        givenModelAnswers("OTHER", "LOW", "0.4");
+        givenRepositorySavesTickets();
 
         Ticket ticket = service.submit("Texte vague");
 
@@ -64,10 +68,8 @@ class TicketServiceTest {
 
     @Test
     void exactThresholdIsRouted() {
-        when(classifier.classify(any())).thenReturn(
-                new ClassificationResult(Category.SOFTWARE, Priority.MEDIUM,
-                        "Summary", "Justification", 0.7));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        givenModelAnswers("SOFTWARE", "MEDIUM", "0.7");
+        givenRepositorySavesTickets();
 
         Ticket ticket = service.submit("Crash application");
 
@@ -76,10 +78,8 @@ class TicketServiceTest {
 
     @Test
     void criticalTicketIsAlwaysPendingHumanEvenWithHighConfidence() {
-        when(classifier.classify(any())).thenReturn(
-                new ClassificationResult(Category.SECURITY, Priority.CRITICAL,
-                        "Intrusion détectée", "Violation de sécurité en cours.", 0.99));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        givenModelAnswers("SECURITY", "CRITICAL", "0.99");
+        givenRepositorySavesTickets();
 
         Ticket ticket = service.submit("Ransomware détecté sur le poste de travail.");
 
@@ -90,9 +90,9 @@ class TicketServiceTest {
 
     @Test
     void classifierFailureSendsTicketToHumanQueue() {
-        when(classifier.classify(any())).thenThrow(
+        when(chatModel.generate(anyList())).thenThrow(
                 new RuntimeException(new java.net.ConnectException("Connection refused")));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        givenRepositorySavesTickets();
 
         Ticket ticket = service.submit("Impossible d'ouvrir le logiciel de crédit");
 
@@ -106,11 +106,9 @@ class TicketServiceTest {
 
     @Test
     void outOfRangeConfidenceSendsTicketToHumanQueue() {
-        // ClassificationResult refuses a confidence of 95: the classifier fails while building it.
-        when(classifier.classify(any())).thenAnswer(inv ->
-                new ClassificationResult(Category.NETWORK, Priority.LOW,
-                        "Summary", "Justification", 95.0));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        // The model answers 95: ClassificationResult refuses it, the classifier fails.
+        givenModelAnswers("NETWORK", "LOW", "95");
+        givenRepositorySavesTickets();
 
         Ticket ticket = service.submit("Le Wi-Fi coupe toutes les 5 minutes");
 
@@ -128,7 +126,7 @@ class TicketServiceTest {
         existing.setRawText("Texte vague");
 
         when(repository.findById(1L)).thenReturn(Optional.of(existing));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        givenRepositorySavesTickets();
 
         Ticket validated = service.validate(1L, Category.NETWORK, Priority.HIGH);
 
@@ -136,5 +134,18 @@ class TicketServiceTest {
         assertThat(validated.getCategory()).isEqualTo(Category.NETWORK);
         assertThat(validated.getPriority()).isEqualTo(Priority.HIGH);
         assertThat(validated.getTeam()).isNotBlank();
+    }
+
+    // --- Helpers ---
+
+    private void givenModelAnswers(String category, String priority, String confidence) {
+        var json = """
+                {"category":"%s","priority":"%s","summary":"Résumé.","justification":"Justification.","confidence":%s}
+                """.formatted(category, priority, confidence);
+        when(chatModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(json)));
+    }
+
+    private void givenRepositorySavesTickets() {
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 }
