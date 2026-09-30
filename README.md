@@ -34,6 +34,15 @@ java -jar target\ticket-triage-0.1.0-SNAPSHOT.jar --classifier.type=fake --serve
 
 Chaque soumission écrit dans la console des lignes `[TRIAGE]` : classifieur utilisé, texte masqué envoyé au modèle (jamais le texte original), réponse brute du modèle, temps de réponse, résultat typé et décision avec sa raison.
 
+### Conserver les données
+
+Par défaut, la base H2 est en mémoire. Le profil `persist` la place dans un fichier, `./data/ticketdb`, relatif au dossier de lancement, et met le schéma à jour sans le recréer : les tickets survivent au redémarrage.
+
+```powershell
+java -jar target\ticket-triage-0.1.0-SNAPSHOT.jar --spring.profiles.active=persist
+mvn spring-boot:run "-Dspring-boot.run.profiles=persist"
+```
+
 ## Tests
 
 ```powershell
@@ -84,7 +93,7 @@ Spring Boot 4 est une version majeure récente qui change le socle. Pour un prot
 Les deux conviennent. LangChain4j a été retenu pour ses modules Ollama et watsonx.ai et pour son indépendance vis-à-vis du framework. Spring AI serait aussi défendable.
 
 ### H2 plutôt que PostgreSQL
-H2 ne demande aucune installation et l'application se lance en une commande. Le code JPA est le même qu'avec PostgreSQL.
+H2 ne demande aucune installation et l'application se lance en une commande. Le code JPA est le même qu'avec PostgreSQL. Par défaut, la base est en mémoire et se vide à chaque redémarrage. Le profil `persist` conserve les données dans un fichier (voir [Conserver les données](#conserver-les-données)).
 
 ### Tests
 `mvn verify` exécute les classes suivantes, sans Ollama :
@@ -107,7 +116,7 @@ Hors `mvn verify`, `GraniteClassifierOllamaIT` interroge le vrai modèle (Ollama
 - **Confiance non calibrée** : c'est une auto-évaluation du modèle ; une catégorie fausse a déjà été observée avec 0,95. Le seuil de 0,7 est une valeur de départ, non mesurée.
 - **Qualité non mesurée** : aucun jeu de tickets étiquetés ; le test live reprend un exemple du prompt et ne sert que de test de fumée.
 - **Masquage par expressions régulières** : e-mails, téléphones français et IBAN écrits en majuscules seulement ; ni cartes bancaires, ni noms, ni adresses. Le texte original reste stocké et affiché à l'agent.
-- **Prototype sans authentification** : ni connexion ni CSRF, console H2 ouverte, base en mémoire vidée à chaque redémarrage.
+- **Prototype sans authentification** : ni connexion ni CSRF, console H2 ouverte, base en mémoire vidée à chaque redémarrage (sauf avec le profil `persist`).
 - **Injection de prompt** : atténuée par la structure (enums, équipe par table, CRITICAL et échecs vers un humain), non testée contre le modèle.
 - **Latence** : sur CPU, environ 19 s au premier appel à froid (mesuré) et une dizaine de secondes ensuite, en appel synchrone. Ollama décharge le modèle après 5 min d'inactivité, sauf si `OLLAMA_KEEP_ALIVE` est défini.
 
