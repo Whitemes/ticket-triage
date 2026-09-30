@@ -8,12 +8,15 @@ import dev.whitemes.tickettriage.domain.Priority;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
@@ -116,6 +119,67 @@ class GraniteClassifierTest {
 
         assertThatThrownBy(() -> classifier.classify("Réseau coupé"))
                 .isInstanceOf(GraniteClassifier.ClassificationException.class);
+    }
+
+    // --- Degraded: response that breaks the ClassificationResult contract ---
+
+    @Test
+    void out_of_range_confidence_in_response_throws_classification_exception() {
+        String json = """
+                {"category":"NETWORK","priority":"LOW",
+                 "summary":"Réseau lent.",
+                 "justification":"Lenteur réseau.",
+                 "confidence":95}
+                """;
+        givenModelReturns(json);
+
+        assertThatThrownBy(() -> classifier.classify("Réseau lent"))
+                .isInstanceOf(GraniteClassifier.ClassificationException.class);
+    }
+
+    @Test
+    void missing_summary_in_response_throws_classification_exception() {
+        String json = """
+                {"category":"NETWORK","priority":"LOW",
+                 "justification":"Lenteur réseau.",
+                 "confidence":0.8}
+                """;
+        givenModelReturns(json);
+
+        assertThatThrownBy(() -> classifier.classify("Réseau lent"))
+                .isInstanceOf(GraniteClassifier.ClassificationException.class);
+    }
+
+    // --- Constructor contract (no network call: the Ollama client is only built) ---
+
+    @Test
+    void blank_base_url_is_rejected() {
+        assertThatThrownBy(() -> new GraniteClassifier(new PersonalDataMasker(), " ", "granite4:micro", 60))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("ollama.base-url");
+    }
+
+    @Test
+    void blank_model_name_is_rejected() {
+        assertThatThrownBy(() -> new GraniteClassifier(new PersonalDataMasker(), "http://localhost:11434", "", 60))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("ollama.model-name");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1})
+    void non_positive_timeout_is_rejected(int timeoutSeconds) {
+        assertThatThrownBy(() -> new GraniteClassifier(
+                new PersonalDataMasker(), "http://localhost:11434", "granite4:micro", timeoutSeconds))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("ollama.timeout-seconds");
+    }
+
+    @Test
+    void valid_configuration_is_accepted() {
+        assertThatCode(() -> new GraniteClassifier(
+                new PersonalDataMasker(), "http://localhost:11434", "granite4:micro", 60))
+                .doesNotThrowAnyException();
     }
 
     // --- Personal data is masked before sending ---

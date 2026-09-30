@@ -106,17 +106,17 @@ public class TicketService {
 
     /**
      * Calls the classifier and returns {@link #FALLBACK} instead of failing when the model is
-     * unreachable, times out, or returns an invalid result. Only the error type is logged,
-     * never the ticket text.
+     * unreachable, times out, or returns an invalid result. An invalid result cannot be built
+     * (the {@link ClassificationResult} constructor rejects it), so it surfaces as an exception.
+     * Only the error type is logged, never the ticket text.
      */
     private ClassificationResult classifySafely(String masked) {
         try {
             ClassificationResult result = classifier.classify(masked);
-            if (result != null && result.category() != null && result.priority() != null
-                    && result.confidence() >= 0.0 && result.confidence() <= 1.0) {
+            if (result != null) {
                 return result;
             }
-            log.warn("[TRIAGE] Résultat de classification invalide : passage en file humaine");
+            log.warn("[TRIAGE] Résultat de classification absent : passage en file humaine");
         } catch (RuntimeException e) {
             Throwable cause = e.getCause() != null ? e.getCause() : e;
             log.warn("[TRIAGE] Classification indisponible ({}) : passage en file humaine",

@@ -106,7 +106,8 @@ class TicketServiceTest {
 
     @Test
     void outOfRangeConfidenceSendsTicketToHumanQueue() {
-        when(classifier.classify(any())).thenReturn(
+        // ClassificationResult refuses a confidence of 95: the classifier fails while building it.
+        when(classifier.classify(any())).thenAnswer(inv ->
                 new ClassificationResult(Category.NETWORK, Priority.LOW,
                         "Summary", "Justification", 95.0));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));

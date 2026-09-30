@@ -97,6 +97,11 @@ public class GraniteClassifier implements TicketClassifier {
             @Value("${ollama.base-url:http://localhost:11434}") String baseUrl,
             @Value("${ollama.model-name:granite4:micro}") String modelName,
             @Value("${ollama.timeout-seconds:60}") int timeoutSeconds) {
+        requireText(baseUrl, "ollama.base-url");
+        requireText(modelName, "ollama.model-name");
+        if (timeoutSeconds <= 0) {
+            throw new IllegalArgumentException("ollama.timeout-seconds must be > 0, got " + timeoutSeconds);
+        }
         this.masker = masker;
         this.chatModel = OllamaChatModel.builder()
                 .baseUrl(baseUrl)
@@ -138,6 +143,12 @@ public class GraniteClassifier implements TicketClassifier {
                     raw.justification(), raw.confidence());
         } catch (Exception e) {
             throw new ClassificationException("Invalid model response: " + e.getMessage(), e);
+        }
+    }
+
+    private static void requireText(String value, String property) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(property + " must not be blank");
         }
     }
 
