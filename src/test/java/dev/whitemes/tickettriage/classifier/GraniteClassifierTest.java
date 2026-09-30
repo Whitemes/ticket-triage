@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 /**
  * Unit tests for {@link GraniteClassifier}.
  * The Ollama HTTP layer is mocked via the {@link ChatLanguageModel} interface —
- * no running Ollama instance required.
+ * no running Ollama instance required. Parsing details are covered by {@link ClassificationResultParserTest}.
  */
 @ExtendWith(MockitoExtension.class)
 class GraniteClassifierTest {
@@ -37,7 +37,7 @@ class GraniteClassifierTest {
 
     @BeforeEach
     void setUp() {
-        classifier = new GraniteClassifier(new PersonalDataMasker(), chatModel);
+        classifier = new GraniteClassifier(new PersonalDataMasker(), new ClassificationResultParser(), chatModel);
     }
 
     // --- Nominal case ---
@@ -79,7 +79,7 @@ class GraniteClassifierTest {
         assertThat(result.confidence()).isGreaterThan(0.7);
     }
 
-    // --- Degraded: malformed JSON ---
+    // --- Degraded: errors propagate so that TicketService can fall back to the human queue ---
 
     @Test
     void malformed_json_response_throws_classification_exception() {
@@ -90,79 +90,28 @@ class GraniteClassifierTest {
                 .hasMessageContaining("Invalid model response");
     }
 
-    // --- Degraded: unknown enum value ---
-
     @Test
-    void unknown_category_in_response_throws_classification_exception() {
-        String json = """
-                {"category":"UNKNOWN_CATEGORY","priority":"HIGH",
-                 "summary":"Problème inconnu.",
-                 "justification":"Catégorie fictive.",
-                 "confidence":0.70}
-                """;
-        givenModelReturns(json);
+    void unreachable_model_error_propagates() {
+        when(chatModel.generate(anyList()))
+                .thenThrow(new RuntimeException(new java.net.ConnectException("Connection refused")));
 
-        assertThatThrownBy(() -> classifier.classify("Some ticket"))
-                .isInstanceOf(ClassificationException.class);
-    }
-
-    // --- Degraded: unknown priority value ---
-
-    @Test
-    void unknown_priority_in_response_throws_classification_exception() {
-        String json = """
-                {"category":"NETWORK","priority":"SUPER_CRITICAL",
-                 "summary":"Réseau coupé.",
-                 "justification":"Coupure réseau.",
-                 "confidence":0.80}
-                """;
-        givenModelReturns(json);
-
-        assertThatThrownBy(() -> classifier.classify("Réseau coupé"))
-                .isInstanceOf(ClassificationException.class);
-    }
-
-    // --- Degraded: response that breaks the ClassificationResult contract ---
-
-    @Test
-    void out_of_range_confidence_in_response_throws_classification_exception() {
-        String json = """
-                {"category":"NETWORK","priority":"LOW",
-                 "summary":"Réseau lent.",
-                 "justification":"Lenteur réseau.",
-                 "confidence":95}
-                """;
-        givenModelReturns(json);
-
-        assertThatThrownBy(() -> classifier.classify("Réseau lent"))
-                .isInstanceOf(ClassificationException.class);
-    }
-
-    @Test
-    void missing_summary_in_response_throws_classification_exception() {
-        String json = """
-                {"category":"NETWORK","priority":"LOW",
-                 "justification":"Lenteur réseau.",
-                 "confidence":0.8}
-                """;
-        givenModelReturns(json);
-
-        assertThatThrownBy(() -> classifier.classify("Réseau lent"))
-                .isInstanceOf(ClassificationException.class);
+        assertThatThrownBy(() -> classifier.classify("Some ticket text"))
+                .isInstanceOf(RuntimeException.class)
+                .hasCauseInstanceOf(java.net.ConnectException.class);
     }
 
     // --- Constructor contract (no network call: the Ollama client is only built) ---
 
     @Test
     void blank_base_url_is_rejected() {
-        assertThatThrownBy(() -> new GraniteClassifier(new PersonalDataMasker(), " ", "granite4:micro", 60))
+        assertThatThrownBy(() -> newClassifier(" ", "granite4:micro", 60))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("ollama.base-url");
     }
 
     @Test
     void blank_model_name_is_rejected() {
-        assertThatThrownBy(() -> new GraniteClassifier(new PersonalDataMasker(), "http://localhost:11434", "", 60))
+        assertThatThrownBy(() -> newClassifier("http://localhost:11434", "", 60))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("ollama.model-name");
     }
@@ -170,16 +119,14 @@ class GraniteClassifierTest {
     @ParameterizedTest
     @ValueSource(ints = {0, -1})
     void non_positive_timeout_is_rejected(int timeoutSeconds) {
-        assertThatThrownBy(() -> new GraniteClassifier(
-                new PersonalDataMasker(), "http://localhost:11434", "granite4:micro", timeoutSeconds))
+        assertThatThrownBy(() -> newClassifier("http://localhost:11434", "granite4:micro", timeoutSeconds))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("ollama.timeout-seconds");
     }
 
     @Test
     void valid_configuration_is_accepted() {
-        assertThatCode(() -> new GraniteClassifier(
-                new PersonalDataMasker(), "http://localhost:11434", "granite4:micro", 60))
+        assertThatCode(() -> newClassifier("http://localhost:11434", "granite4:micro", 60))
                 .doesNotThrowAnyException();
     }
 
@@ -207,10 +154,15 @@ class GraniteClassifierTest {
         classifier.classify("Mon compte user@banque.fr est bloqué.");
     }
 
-    // --- Helper ---
+    // --- Helpers ---
 
     private void givenModelReturns(String json) {
         when(chatModel.generate(anyList()))
                 .thenReturn(Response.from(AiMessage.from(json)));
+    }
+
+    private static GraniteClassifier newClassifier(String baseUrl, String modelName, int timeoutSeconds) {
+        return new GraniteClassifier(new PersonalDataMasker(), new ClassificationResultParser(),
+                baseUrl, modelName, timeoutSeconds);
     }
 }

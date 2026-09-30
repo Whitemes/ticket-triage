@@ -93,7 +93,8 @@ H2 ne demande aucune installation et l'application se lance en une commande. Le 
 |---|---|
 | `ClassificationResultTest` | Contrat du résultat de classification : champs obligatoires et confiance dans [0 ; 1] (NaN et 95 refusés). |
 | `FakeClassifierTest` | Règles par mots-clés : réseau, accès, sécurité prioritaire sur réseau et mot de passe (phishing, ransomware), texte sans mot-clé en OTHER sous le seuil, entrée nulle. |
-| `GraniteClassifierTest` | GraniteClassifier avec un modèle de langage simulé : réponse JSON valide convertie en résultat typé, cas VPN, JSON malformé, catégorie ou priorité inconnue, confiance hors plage et résumé absent rejetés, masquage des données avant l'envoi, refus d'une URL ou d'un nom de modèle vide et d'un délai nul ou négatif. |
+| `ClassificationResultParserTest` | Lecture de la réponse JSON du modèle : conversion en résultat typé (valeurs en minuscules acceptées), rejet d'un JSON malformé, d'une catégorie ou priorité inconnue, d'une confiance hors plage, d'un résumé absent et d'un champ inconnu. |
+| `GraniteClassifierTest` | GraniteClassifier avec un modèle de langage simulé : réponse valide convertie en résultat typé, cas VPN, propagation des erreurs (JSON malformé, modèle injoignable), masquage des données avant l'envoi, refus d'une URL ou d'un nom de modèle vide et d'un délai nul ou négatif. |
 | `PersonalDataMaskerTest` | Masquage des e-mails, téléphones français et IBAN (compacts et espacés, égalité stricte), texte sans donnée personnelle inchangé, non-régression sur des codes techniques (SRV01, PC75, KB5034441, INC0012345, Office365, Win11). |
 | `TeamRouterTest` | Chaque catégorie a une équipe. |
 | `TicketServiceTest` | Décision de routage : au-dessus, en dessous et au niveau du seuil, CRITICAL toujours en file humaine, validation humaine, repli en file humaine sur erreur réseau et sur confiance hors de [0 ; 1]. |

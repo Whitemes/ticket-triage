@@ -37,7 +37,7 @@ class GraniteClassifierOllamaIT {
 
         // Uses the public production constructor (builds a real OllamaChatModel internally)
         GraniteClassifier realClassifier = new GraniteClassifier(
-                new PersonalDataMasker(), baseUrl, "granite4:micro", 120);
+                new PersonalDataMasker(), new ClassificationResultParser(), baseUrl, "granite4:micro", 120);
 
         ClassificationResult result = realClassifier.classify(
                 "Impossible de me connecter au VPN depuis ce matin, j'ai l'erreur 619.");
