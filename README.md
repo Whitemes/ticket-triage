@@ -2,7 +2,7 @@
 
 Prototype de tri et de routage de tickets de support IT pour un grand compte (banque ou assurance), réalisé pour un exercice IBM Client Engineering. Un ticket en texte libre reçoit une catégorie, une priorité, une équipe, un résumé, une justification et un niveau de confiance. Sous le seuil de confiance, en priorité CRITICAL ou si le modèle échoue, il part dans une file de validation humaine.
 
-Stack : Java 21, Spring Boot 3, Maven, LangChain4j, Ollama (granite4:micro, en local), H2 en mémoire, Thymeleaf, JUnit 5.
+Stack : Java 21, Spring Boot 3, Maven, LangChain4j, Ollama (granite4:micro, en local), H2 (en mémoire par défaut, fichier avec le profil `persist`), Thymeleaf, JUnit 5.
 
 ## Prérequis
 
@@ -87,7 +87,7 @@ C'est un score auto-déclaré par le modèle dans sa réponse JSON. Il n'est pas
 Les deux sont des versions LTS. Java 21 est la plus déployée chez les clients et elle est validée par tout l'écosystème utilisé ici. Une incompatibilité d'un outil de test a été rencontrée sur Java 25. La migration vers 25 serait triviale.
 
 ### Spring Boot 3 plutôt que 4
-Spring Boot 4 est une version majeure récente qui change le socle. Pour un prototype réalisé en deux jours, la version stable a été retenue ; les starters LangChain4j visent Spring Boot 3. La montée de version est prévue.
+Spring Boot 4 est une version majeure récente qui change le socle. Pour un prototype réalisé en deux jours, la version stable a été retenue ; les starters Spring Boot de LangChain4j visent eux aussi Spring Boot 3 (ce projet utilise directement le module `langchain4j-ollama`). La montée de version est prévue.
 
 ### LangChain4j plutôt que Spring AI
 Les deux conviennent. LangChain4j a été retenu pour ses modules Ollama et watsonx.ai et pour son indépendance vis-à-vis du framework. Spring AI serait aussi défendable.
@@ -102,12 +102,12 @@ H2 ne demande aucune installation et l'application se lance en une commande. Le 
 |---|---|
 | `ClassificationResultTest` | Contrat du résultat de classification : champs obligatoires et confiance dans [0 ; 1] (NaN et 95 refusés). |
 | `FakeClassifierTest` | Règles par mots-clés : réseau, accès, sécurité prioritaire sur réseau et mot de passe (phishing, ransomware), texte sans mot-clé en OTHER sous le seuil, entrée nulle. |
-| `ClassificationResultParserTest` | Lecture de la réponse JSON du modèle : conversion en résultat typé (valeurs en minuscules acceptées), rejet d'un JSON malformé, d'une catégorie ou priorité inconnue, d'une confiance hors plage, d'un résumé absent et d'un champ inconnu. |
-| `GraniteClassifierTest` | GraniteClassifier avec un modèle de langage simulé : réponse valide convertie en résultat typé, cas VPN, propagation des erreurs (JSON malformé, modèle injoignable), masquage des données avant l'envoi, refus d'une URL ou d'un nom de modèle vide et d'un délai nul ou négatif. |
-| `PersonalDataMaskerTest` | Masquage des e-mails, téléphones français et IBAN (compacts et espacés, égalité stricte), texte sans donnée personnelle inchangé, non-régression sur des codes techniques (SRV01, PC75, KB5034441, INC0012345, Office365, Win11). |
+| `ClassificationResultParserTest` | Lecture de la réponse JSON du modèle : conversion en résultat typé (valeurs en minuscules acceptées), rejet d'un JSON malformé, d'une catégorie ou priorité inconnue, d'une confiance absente ou hors plage, d'un résumé absent et d'un champ inconnu. |
+| `GraniteClassifierTest` | GraniteClassifier avec un modèle de langage simulé : réponse valide convertie en résultat typé, cas VPN, propagation des erreurs (JSON malformé, modèle injoignable), masquage des données avant l'envoi, refus d'une URL ou d'un nom de modèle vide et d'un délai nul ou négatif, configuration valide acceptée. |
+| `PersonalDataMaskerTest` | Masquage des e-mails, téléphones français et IBAN (compacts et espacés, égalité stricte), texte mêlant e-mail, téléphone et IBAN, entrée nulle rendue en chaîne vide, texte sans donnée personnelle inchangé, non-régression sur des codes techniques (SRV01, PC75, KB5034441, INC0012345, Office365, Win11). |
 | `TeamRouterTest` | Chaque catégorie a une équipe. |
-| `TicketServiceTest` | Avec le vrai GraniteClassifier et un modèle de langage simulé (l'interface `TicketClassifier` est scellée et ne se simule pas). Décision de routage : au-dessus, en dessous et au niveau du seuil, CRITICAL toujours en file humaine, validation humaine, repli en file humaine sur erreur réseau et sur confiance hors de [0 ; 1]. |
-| `TicketControllerTest` | Contexte Spring complet (H2, FakeClassifier) : création d'un ticket, texte vague en file humaine, page du ticket avec le texte envoyé au modèle, validation redirigée vers le ticket en VALIDATED, ticket vide ou de plus de 5000 caractères refusé sur le formulaire sans appel au modèle, attribut maxlength, réponse 404 pour un ticket inconnu (affichage et validation), pages d'accueil et de file humaine. |
+| `TicketServiceTest` | Avec le vrai GraniteClassifier et un modèle de langage simulé (l'interface `TicketClassifier` est scellée et ne se simule pas). Décision de routage : au-dessus, en dessous et au niveau du seuil, CRITICAL toujours en file humaine, validation humaine, repli en file humaine sur erreur réseau et sur confiance hors de [0 ; 1], y compris avec un seuil à 0. |
+| `TicketControllerTest` | Contexte Spring complet (H2, FakeClassifier) : création d'un ticket, texte vague en file humaine, page du ticket avec le texte envoyé au modèle, validation redirigée vers le ticket en VALIDATED, ticket vide, fait d'espaces (insécables compris) ou de plus de 5000 caractères refusé sur le formulaire avec son message et sans appel au modèle, retours à la ligne comptés comme dans le navigateur, attribut maxlength, réponse 404 pour un ticket inconnu (affichage et validation), pages d'accueil et de file humaine. |
 
 Hors `mvn verify`, `GraniteClassifierOllamaIT` interroge le vrai modèle (Ollama doit tourner) : `$env:OLLAMA_IT='true'; mvn test -Pollama-live`.
 
@@ -120,4 +120,4 @@ Hors `mvn verify`, `GraniteClassifierOllamaIT` interroge le vrai modèle (Ollama
 - **Injection de prompt** : atténuée par la structure (enums, équipe par table, CRITICAL et échecs vers un humain), non testée contre le modèle.
 - **Latence** : sur CPU, environ 19 s au premier appel à froid (mesuré) et une dizaine de secondes ensuite, en appel synchrone. Ollama décharge le modèle après 5 min d'inactivité, sauf si `OLLAMA_KEEP_ALIVE` est défini.
 
-Pistes : jeu d'évaluation étiqueté et calibration du seuil, sortie JSON contrainte avec température nulle, reconnaissance d'entités nommées pour le masquage, base persistante, authentification, traitement asynchrone.
+Pistes : jeu d'évaluation étiqueté et calibration du seuil, sortie JSON contrainte avec température nulle, reconnaissance d'entités nommées pour le masquage, base PostgreSQL, authentification, traitement asynchrone.
