@@ -41,6 +41,8 @@ mvn verify                                        # tests unitaires et web, sans
 $env:OLLAMA_IT='true'; mvn test -Pollama-live     # test contre le vrai Ollama (Ollama doit tourner)
 ```
 
+Le détail des classes de test figure dans [Choix et justifications › Tests](#tests-1).
+
 ## Flux de traitement
 
 ```mermaid
@@ -63,6 +65,40 @@ flowchart TD
 ```
 
 Le modèle ne choisit jamais l'équipe : elle est déduite de la catégorie par une table Java. Les catégories et priorités sont des listes fermées (enums).
+
+## Choix et justifications
+
+### Modèle
+granite4:micro, de la famille Granite d'IBM, open source (licence Apache 2.0), environ 3 milliards de paramètres (3,4 G, quantifié en Q4_K_M, 2,1 Go sur disque). Il est exécuté en local via Ollama, en inférence seule : aucun entraînement ni ajustement. Toutes les données de test sont synthétiques.
+
+### Confiance
+C'est un score auto-déclaré par le modèle dans sa réponse JSON. Il n'est pas calibré. Le seuil est configurable (`classifier.confidence-threshold`, 0,7 par défaut). Les garde-fous structurels n'en dépendent pas : listes fermées de catégories et de priorités, équipe déduite par une table Java, priorité CRITICAL et réponses invalides toujours envoyées en file humaine.
+
+### Java 21 plutôt que 25
+Les deux sont des versions LTS. Java 21 est la plus déployée chez les clients et elle est validée par tout l'écosystème utilisé ici. Une incompatibilité d'un outil de test a été rencontrée sur Java 25. La migration vers 25 serait triviale.
+
+### Spring Boot 3 plutôt que 4
+Spring Boot 4 est une version majeure récente qui change le socle. Pour un prototype réalisé en deux jours, la version stable a été retenue ; les starters LangChain4j visent Spring Boot 3. La montée de version est prévue.
+
+### LangChain4j plutôt que Spring AI
+Les deux conviennent. LangChain4j a été retenu pour ses modules Ollama et watsonx.ai et pour son indépendance vis-à-vis du framework. Spring AI serait aussi défendable.
+
+### H2 plutôt que PostgreSQL
+H2 ne demande aucune installation et l'application se lance en une commande. Le code JPA est le même qu'avec PostgreSQL.
+
+### Tests
+`mvn verify` exécute les classes suivantes, sans Ollama :
+
+| Classe | Ce qu'elle couvre |
+|---|---|
+| `FakeClassifierTest` | Règles par mots-clés : réseau, accès, sécurité prioritaire sur réseau et mot de passe (phishing, ransomware), texte sans mot-clé en OTHER sous le seuil, entrée nulle. |
+| `GraniteClassifierTest` | GraniteClassifier avec un modèle de langage simulé : réponse JSON valide convertie en résultat typé, cas VPN, JSON malformé et catégorie ou priorité inconnue rejetés, masquage des données avant l'envoi. |
+| `PersonalDataMaskerTest` | Masquage des e-mails, téléphones français et IBAN (compacts et espacés, égalité stricte), texte sans donnée personnelle inchangé, non-régression sur des codes techniques (SRV01, PC75, KB5034441, INC0012345, Office365, Win11). |
+| `TeamRouterTest` | Chaque catégorie a une équipe. |
+| `TicketServiceTest` | Décision de routage : au-dessus, en dessous et au niveau du seuil, CRITICAL toujours en file humaine, validation humaine, repli en file humaine sur erreur réseau et sur confiance hors de [0 ; 1]. |
+| `TicketControllerTest` | Contexte Spring complet (H2, FakeClassifier) : création d'un ticket, texte vague en file humaine, page du ticket avec le texte envoyé au modèle, validation redirigée vers le ticket en VALIDATED, pages d'accueil et de file humaine. |
+
+Hors `mvn verify`, `GraniteClassifierOllamaIT` interroge le vrai modèle (Ollama doit tourner) : `$env:OLLAMA_IT='true'; mvn test -Pollama-live`.
 
 ## Limites
 
