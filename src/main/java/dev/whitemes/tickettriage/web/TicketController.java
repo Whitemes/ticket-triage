@@ -79,7 +79,7 @@ public class TicketController {
 
     /** Returns why the submitted text is refused, or empty when it can be classified. */
     private Optional<String> validationError(String rawText) {
-        if (rawText.isBlank()) {
+        if (isBlank(rawText)) {
             return Optional.of("Le ticket est vide : décrivez le problème rencontré.");
         }
         // Browsers count a line break as one character but send CRLF: measure the normalised text.
@@ -87,5 +87,10 @@ public class TicketController {
             return Optional.of("Le ticket dépasse la longueur maximale de " + maxLength + " caractères.");
         }
         return Optional.empty();
+    }
+
+    /** Like {@link String#isBlank()}, but non-breaking spaces (U+00A0, U+2007, U+202F) also count as blank. */
+    private static boolean isBlank(String text) {
+        return text.codePoints().allMatch(cp -> Character.isWhitespace(cp) || Character.isSpaceChar(cp));
     }
 }

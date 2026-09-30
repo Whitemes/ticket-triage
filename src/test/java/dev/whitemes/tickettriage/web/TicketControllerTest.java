@@ -4,6 +4,8 @@ import dev.whitemes.tickettriage.domain.Ticket;
 import dev.whitemes.tickettriage.domain.TicketRepository;
 import dev.whitemes.tickettriage.domain.TicketStatus;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -83,14 +85,16 @@ class TicketControllerTest {
                 .isEqualTo(TicketStatus.VALIDATED);
     }
 
-    @Test
-    void blankTicketIsRefusedOnTheForm() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   \n  ", "  "})
+    void blankTicketIsRefusedOnTheForm(String rawText) throws Exception {
         long before = repository.count();
 
-        mockMvc.perform(post("/tickets").param("rawText", "   \n  "))
+        mockMvc.perform(post("/tickets").param("rawText", rawText))
                 .andExpect(status().isOk())
                 .andExpect(view().name("index"))
-                .andExpect(model().attributeExists("error"));
+                .andExpect(model().attribute("error", containsString("Le ticket est vide")))
+                .andExpect(content().string(containsString("Le ticket est vide")));
 
         assertThat(repository.count()).as("no ticket created, classifier not called").isEqualTo(before);
     }
@@ -102,8 +106,8 @@ class TicketControllerTest {
         mockMvc.perform(post("/tickets").param("rawText", "a".repeat(5001)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("index"))
-                .andExpect(model().attributeExists("error"))
-                .andExpect(content().string(containsString("5000")));
+                .andExpect(model().attribute("error", containsString("longueur maximale de 5000")))
+                .andExpect(content().string(containsString("longueur maximale de 5000")));
 
         assertThat(repository.count()).isEqualTo(before);
     }
@@ -111,6 +115,13 @@ class TicketControllerTest {
     @Test
     void ticketAtMaxLengthIsAccepted() throws Exception {
         mockMvc.perform(post("/tickets").param("rawText", "a".repeat(5000)))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void crlfLineBreaksCountAsOneCharacterLikeTheBrowser() throws Exception {
+        // 7 500 characters as sent (CRLF), 5 000 as counted by the browser's maxlength: accepted.
+        mockMvc.perform(post("/tickets").param("rawText", "a\r\n".repeat(2500)))
                 .andExpect(status().is3xxRedirection());
     }
 

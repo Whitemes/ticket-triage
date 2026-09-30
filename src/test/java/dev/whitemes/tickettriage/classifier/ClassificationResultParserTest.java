@@ -92,6 +92,18 @@ class ClassificationResultParserTest {
     }
 
     @Test
+    void missing_confidence_is_rejected() {
+        var json = """
+                {"category":"NETWORK","priority":"LOW","summary":"Réseau lent.",
+                 "justification":"Lenteur réseau."}
+                """;
+
+        assertThatThrownBy(() -> parser.parse(json))
+                .isInstanceOf(ClassificationException.class)
+                .hasMessageContaining("confidence");
+    }
+
+    @Test
     void unknown_field_is_rejected() {
         var json = """
                 {"category":"NETWORK","priority":"LOW","summary":"Réseau lent.",

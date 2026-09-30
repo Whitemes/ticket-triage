@@ -20,6 +20,9 @@ public class ClassificationResultParser {
     public ClassificationResult parse(String json) {
         try {
             RawResult raw = objectMapper.readValue(json, RawResult.class);
+            if (raw.confidence() == null) {
+                throw new IllegalArgumentException("confidence is missing");
+            }
             Category category = Category.valueOf(raw.category().toUpperCase());
             Priority priority = Priority.valueOf(raw.priority().toUpperCase());
             return new ClassificationResult(category, priority, raw.summary(),
@@ -29,11 +32,14 @@ public class ClassificationResultParser {
         }
     }
 
-    /** Intermediate record for Jackson deserialization of the model's JSON reply. */
+    /**
+     * Intermediate record for Jackson deserialization of the model's JSON reply. The confidence is boxed
+     * so that a missing value is detected instead of silently becoming 0.0.
+     */
     private record RawResult(
             String category,
             String priority,
             String summary,
             String justification,
-            double confidence) {}
+            Double confidence) {}
 }

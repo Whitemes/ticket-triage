@@ -117,6 +117,21 @@ class TicketServiceTest {
     }
 
     @Test
+    void failedClassificationGoesToHumanQueueEvenWithZeroThreshold() {
+        var classifier = new GraniteClassifier(masker, new ClassificationResultParser(), chatModel);
+        var permissiveService = new TicketService(classifier, masker, repository, teamRouter, 0.0);
+        when(chatModel.generate(anyList())).thenThrow(
+                new RuntimeException(new java.net.ConnectException("Connection refused")));
+        givenRepositorySavesTickets();
+
+        Ticket ticket = permissiveService.submit("Impossible d'ouvrir le logiciel de crédit");
+
+        assertThat(ticket.getStatus())
+                .as("the fallback result never passes the threshold test, whatever the threshold")
+                .isEqualTo(TicketStatus.PENDING_HUMAN);
+    }
+
+    @Test
     void validateUpdatesTicketToValidated() {
         var existing = new Ticket();
         existing.setId(1L);
