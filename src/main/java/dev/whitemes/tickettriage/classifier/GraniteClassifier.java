@@ -1,14 +1,11 @@
 package dev.whitemes.tickettriage.classifier;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.output.Response;
-import dev.whitemes.tickettriage.domain.Category;
-import dev.whitemes.tickettriage.domain.Priority;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,21 +19,22 @@ import java.util.List;
 /**
  * AI-backed classifier that calls Granite 4:micro via Ollama + LangChain4j.
  *
- * Personal data is masked by {@link PersonalDataMasker} before the text is sent.
- * If the model returns an invalid response the exception propagates so that
+ * Personal data is masked by {@link PersonalDataMasker} before the text is sent, and the reply is
+ * converted by {@link ClassificationResultParser}. If the model is unreachable or its reply is
+ * invalid, the exception propagates so that
  * {@link dev.whitemes.tickettriage.service.TicketService} can set the ticket to PENDING_HUMAN.
  */
 @Service
 @ConditionalOnProperty(name = "classifier.type", havingValue = "granite")
-public class GraniteClassifier implements TicketClassifier {
+public final class GraniteClassifier implements TicketClassifier {
 
     private static final Logger log = LoggerFactory.getLogger(GraniteClassifier.class);
 
     /**
-     * System prompt: category definitions + 3 few-shot examples.
+     * System prompt: category definitions + 4 few-shot examples.
      * The model is instructed to reply with a single JSON object — nothing else.
      */
-    static final String SYSTEM_PROMPT = """
+    private static final String SYSTEM_PROMPT = """
             You are an IT support ticket classifier for a large financial organisation.
             Your only job is to read a ticket text and return a JSON object — no explanation, no markdown, just JSON.
 
@@ -88,29 +86,39 @@ public class GraniteClassifier implements TicketClassifier {
             """;
 
     private final PersonalDataMasker masker;
+    private final ClassificationResultParser parser;
     private final ChatLanguageModel chatModel;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     public GraniteClassifier(
             PersonalDataMasker masker,
+            ClassificationResultParser parser,
             @Value("${ollama.base-url:http://localhost:11434}") String baseUrl,
             @Value("${ollama.model-name:granite4:micro}") String modelName,
             @Value("${ollama.timeout-seconds:60}") int timeoutSeconds) {
+        requireText(baseUrl, "ollama.base-url");
+        requireText(modelName, "ollama.model-name");
+        if (timeoutSeconds <= 0) {
+            throw new IllegalArgumentException("ollama.timeout-seconds must be > 0, got " + timeoutSeconds);
+        }
         this.masker = masker;
+        this.parser = parser;
         this.chatModel = OllamaChatModel.builder()
                 .baseUrl(baseUrl)
                 .modelName(modelName)
                 .timeout(Duration.ofSeconds(timeoutSeconds))
-                // LangChain4j counts maxRetries as the TOTAL number of attempts (default 3).
-                // One attempt only: on failure the ticket goes to the human queue instead.
+                // Une seule tentative ; en cas d'échec, le ticket part en file humaine.
                 .maxRetries(1)
                 .build();
     }
 
-    /** Package-visible constructor for testing: accepts a stubbed {@link ChatLanguageModel}. */
-    GraniteClassifier(PersonalDataMasker masker, ChatLanguageModel chatModel) {
+    /**
+     * Builds the classifier on any LangChain4j {@link ChatLanguageModel}. Used by tests with a stubbed
+     * model: {@link TicketClassifier} is sealed, so tests exercise this real implementation instead of a mock.
+     */
+    public GraniteClassifier(PersonalDataMasker masker, ClassificationResultParser parser, ChatLanguageModel chatModel) {
         this.masker = masker;
+        this.parser = parser;
         this.chatModel = chatModel;
     }
 
@@ -126,33 +134,12 @@ public class GraniteClassifier implements TicketClassifier {
         String json = response.content().text().strip();
         log.info("[TRIAGE] Réponse brute du modèle en {} ms : {}", elapsedMs, json);
 
-        return parseResult(json);
+        return parser.parse(json);
     }
 
-    private ClassificationResult parseResult(String json) {
-        try {
-            RawResult raw = objectMapper.readValue(json, RawResult.class);
-            Category category = Category.valueOf(raw.category().toUpperCase());
-            Priority priority = Priority.valueOf(raw.priority().toUpperCase());
-            return new ClassificationResult(category, priority, raw.summary(),
-                    raw.justification(), raw.confidence());
-        } catch (Exception e) {
-            throw new ClassificationException("Invalid model response: " + e.getMessage(), e);
-        }
-    }
-
-    /** Intermediate record for Jackson deserialization of the model's JSON reply. */
-    private record RawResult(
-            String category,
-            String priority,
-            String summary,
-            String justification,
-            double confidence) {}
-
-    /** Thrown when the model's JSON cannot be mapped to a valid {@link ClassificationResult}. */
-    public static class ClassificationException extends RuntimeException {
-        public ClassificationException(String message, Throwable cause) {
-            super(message, cause);
+    private static void requireText(String value, String property) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(property + " must not be blank");
         }
     }
 }

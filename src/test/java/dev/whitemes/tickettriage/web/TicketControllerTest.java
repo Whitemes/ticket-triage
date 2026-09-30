@@ -4,6 +4,8 @@ import dev.whitemes.tickettriage.domain.Ticket;
 import dev.whitemes.tickettriage.domain.TicketRepository;
 import dev.whitemes.tickettriage.domain.TicketStatus;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -81,6 +83,67 @@ class TicketControllerTest {
 
         assertThat(repository.findById(pending.getId()).orElseThrow().getStatus())
                 .isEqualTo(TicketStatus.VALIDATED);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   \n  ", "  "})
+    void blankTicketIsRefusedOnTheForm(String rawText) throws Exception {
+        long before = repository.count();
+
+        mockMvc.perform(post("/tickets").param("rawText", rawText))
+                .andExpect(status().isOk())
+                .andExpect(view().name("index"))
+                .andExpect(model().attribute("error", containsString("Le ticket est vide")))
+                .andExpect(content().string(containsString("Le ticket est vide")));
+
+        assertThat(repository.count()).as("no ticket created, classifier not called").isEqualTo(before);
+    }
+
+    @Test
+    void tooLongTicketIsRefusedOnTheForm() throws Exception {
+        long before = repository.count();
+
+        mockMvc.perform(post("/tickets").param("rawText", "a".repeat(5001)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("index"))
+                .andExpect(model().attribute("error", containsString("longueur maximale de 5000")))
+                .andExpect(content().string(containsString("longueur maximale de 5000")));
+
+        assertThat(repository.count()).isEqualTo(before);
+    }
+
+    @Test
+    void ticketAtMaxLengthIsAccepted() throws Exception {
+        mockMvc.perform(post("/tickets").param("rawText", "a".repeat(5000)))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void crlfLineBreaksCountAsOneCharacterLikeTheBrowser() throws Exception {
+        // 7 500 characters as sent (CRLF), 5 000 as counted by the browser's maxlength: accepted.
+        mockMvc.perform(post("/tickets").param("rawText", "a\r\n".repeat(2500)))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void formDeclaresMaxLength() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("maxlength=\"5000\"")));
+    }
+
+    @Test
+    void unknownTicketReturns404() throws Exception {
+        mockMvc.perform(get("/tickets/9999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void validatingUnknownTicketReturns404() throws Exception {
+        mockMvc.perform(post("/human-queue/9999/validate")
+                        .param("category", "NETWORK")
+                        .param("priority", "HIGH"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

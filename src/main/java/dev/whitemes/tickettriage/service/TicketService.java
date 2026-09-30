@@ -4,6 +4,7 @@ import dev.whitemes.tickettriage.classifier.ClassificationResult;
 import dev.whitemes.tickettriage.classifier.PersonalDataMasker;
 import dev.whitemes.tickettriage.classifier.TicketClassifier;
 import dev.whitemes.tickettriage.domain.*;
+import dev.whitemes.tickettriage.exception.TicketNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,7 +68,7 @@ public class TicketService {
         log.info("[TRIAGE] Résultat en {} ms : catégorie={}, priorité={}, confiance={}",
                 elapsedMs, result.category(), result.priority(), result.confidence());
 
-        Ticket ticket = new Ticket();
+        var ticket = new Ticket();
         ticket.setRawText(rawText);
         ticket.setMaskedText(masked);
         ticket.setCategory(result.category());
@@ -106,17 +107,17 @@ public class TicketService {
 
     /**
      * Calls the classifier and returns {@link #FALLBACK} instead of failing when the model is
-     * unreachable, times out, or returns an invalid result. Only the error type is logged,
-     * never the ticket text.
+     * unreachable, times out, or returns an invalid result. An invalid result cannot be built
+     * (the {@link ClassificationResult} constructor rejects it), so it surfaces as an exception.
+     * Only the error type is logged, never the ticket text.
      */
     private ClassificationResult classifySafely(String masked) {
         try {
             ClassificationResult result = classifier.classify(masked);
-            if (result != null && result.category() != null && result.priority() != null
-                    && result.confidence() >= 0.0 && result.confidence() <= 1.0) {
+            if (result != null) {
                 return result;
             }
-            log.warn("[TRIAGE] Résultat de classification invalide : passage en file humaine");
+            log.warn("[TRIAGE] Résultat de classification absent : passage en file humaine");
         } catch (RuntimeException e) {
             Throwable cause = e.getCause() != null ? e.getCause() : e;
             log.warn("[TRIAGE] Classification indisponible ({}) : passage en file humaine",
@@ -137,11 +138,11 @@ public class TicketService {
         return repository.findAll();
     }
 
-    /** Returns a single ticket by id, or throws if not found. */
+    /** Returns a single ticket by id, or throws {@link TicketNotFoundException} (HTTP 404) if not found. */
     @Transactional(readOnly = true)
     public Ticket getTicket(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Ticket introuvable : " + id));
+                .orElseThrow(() -> new TicketNotFoundException(id));
     }
 
     /**

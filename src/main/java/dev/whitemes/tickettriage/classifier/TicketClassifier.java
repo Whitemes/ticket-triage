@@ -1,7 +1,10 @@
 package dev.whitemes.tickettriage.classifier;
 
-/** Contract for all ticket classifiers (fake or AI-backed). */
-public interface TicketClassifier {
+/**
+ * Contract for all ticket classifiers. Sealed: the only implementations are the AI-backed
+ * {@link GraniteClassifier} and the keyword-based {@link FakeClassifier}.
+ */
+public sealed interface TicketClassifier permits GraniteClassifier, FakeClassifier {
 
     /**
      * Classifies a raw ticket text.

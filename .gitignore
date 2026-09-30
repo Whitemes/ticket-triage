@@ -49,6 +49,8 @@ logs/
 ### H2 (fichiers créés si la base passe en mode fichier) ###
 *.mv.db
 *.trace.db
+# Base H2 du profil « persist »
+/data/
 
 ### Secrets et configuration locale : aucun secret dans le dépôt ###
 .env
