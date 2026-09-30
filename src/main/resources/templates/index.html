@@ -8,6 +8,7 @@
         textarea { width: 100%; height: 8rem; }
         button { margin-top: 0.5rem; padding: 0.5rem 1.5rem; }
         nav a { margin-right: 1rem; }
+        .erreur { color: #b00020; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -19,8 +20,10 @@
 <h1>Soumettre un ticket de support</h1>
 <form id="ticket-form" th:action="@{/tickets}" method="post"
       onsubmit="this.querySelector('button').disabled = true; document.getElementById('attente').hidden = false;">
+    <p class="erreur" th:if="${error}" th:text="${error}"></p>
     <label for="rawText"><strong>Description du problème :</strong></label><br/>
-    <textarea id="rawText" name="rawText" required placeholder="Décrivez votre problème…"></textarea><br/>
+    <textarea id="rawText" name="rawText" required th:maxlength="${maxLength}" th:text="${rawText}"
+              placeholder="Décrivez votre problème…"></textarea><br/>
     <button type="submit">Envoyer</button>
     <p id="attente" hidden>Classification en cours…</p>
 </form>

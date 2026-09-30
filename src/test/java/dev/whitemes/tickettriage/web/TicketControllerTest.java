@@ -84,6 +84,44 @@ class TicketControllerTest {
     }
 
     @Test
+    void blankTicketIsRefusedOnTheForm() throws Exception {
+        long before = repository.count();
+
+        mockMvc.perform(post("/tickets").param("rawText", "   \n  "))
+                .andExpect(status().isOk())
+                .andExpect(view().name("index"))
+                .andExpect(model().attributeExists("error"));
+
+        assertThat(repository.count()).as("no ticket created, classifier not called").isEqualTo(before);
+    }
+
+    @Test
+    void tooLongTicketIsRefusedOnTheForm() throws Exception {
+        long before = repository.count();
+
+        mockMvc.perform(post("/tickets").param("rawText", "a".repeat(5001)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("index"))
+                .andExpect(model().attributeExists("error"))
+                .andExpect(content().string(containsString("5000")));
+
+        assertThat(repository.count()).isEqualTo(before);
+    }
+
+    @Test
+    void ticketAtMaxLengthIsAccepted() throws Exception {
+        mockMvc.perform(post("/tickets").param("rawText", "a".repeat(5000)))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void formDeclaresMaxLength() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("maxlength=\"5000\"")));
+    }
+
+    @Test
     void unknownTicketReturns404() throws Exception {
         mockMvc.perform(get("/tickets/9999"))
                 .andExpect(status().isNotFound());
