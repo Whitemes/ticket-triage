@@ -44,7 +44,7 @@ class GraniteClassifierTest {
 
     @Test
     void nominal_valid_json_response_returns_classification_result() {
-        String json = """
+        var json = """
                 {"category":"SOFTWARE","priority":"MEDIUM",
                  "summary":"Application crash au démarrage.",
                  "justification":"L'application ne répond plus après le lancement.",
@@ -63,7 +63,7 @@ class GraniteClassifierTest {
 
     @Test
     void ticket_vpn_classifie_en_network() {
-        String json = """
+        var json = """
                 {"category":"NETWORK","priority":"HIGH",
                  "summary":"Connexion VPN impossible, erreur 619.",
                  "justification":"Erreur VPN — problème réseau ou de configuration tunnel.",
@@ -134,7 +134,7 @@ class GraniteClassifierTest {
 
     @Test
     void personal_data_is_masked_before_classification() {
-        String json = """
+        var json = """
                 {"category":"ACCESS","priority":"HIGH",
                  "summary":"Compte verrouillé.",
                  "justification":"Problème d'accès.",

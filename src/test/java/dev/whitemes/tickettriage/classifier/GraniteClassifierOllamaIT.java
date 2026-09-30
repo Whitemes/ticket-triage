@@ -36,7 +36,7 @@ class GraniteClassifierOllamaIT {
                 : "http://localhost:11434";
 
         // Uses the public production constructor (builds a real OllamaChatModel internally)
-        GraniteClassifier realClassifier = new GraniteClassifier(
+        var realClassifier = new GraniteClassifier(
                 new PersonalDataMasker(), new ClassificationResultParser(), baseUrl, "granite4:micro", 120);
 
         ClassificationResult result = realClassifier.classify(

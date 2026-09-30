@@ -15,7 +15,7 @@ class ClassificationResultTest {
     @ParameterizedTest
     @ValueSource(doubles = {0.0, 0.7, 1.0})
     void valid_result_is_accepted(double confidence) {
-        ClassificationResult result = new ClassificationResult(
+        var result = new ClassificationResult(
                 Category.NETWORK, Priority.HIGH, "Résumé", "Justification", confidence);
 
         assertThat(result.confidence()).isEqualTo(confidence);

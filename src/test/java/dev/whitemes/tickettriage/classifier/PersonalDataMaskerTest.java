@@ -62,7 +62,7 @@ class PersonalDataMaskerTest {
     @Test
     void iban_spaced_is_replaced_and_no_digit_leaks_to_model() {
         // Synthetic spaced FR IBAN — format used by most French banks
-        String spaced = "FR76 3000 6000 0112 3456 7890 189";
+        var spaced = "FR76 3000 6000 0112 3456 7890 189";
         String result = masker.mask("Voici mon IBAN : " + spaced + " merci.");
         assertThat(result)
                 .as("aucun chiffre de l'IBAN ne doit subsister dans le texte masqué")
@@ -80,7 +80,7 @@ class PersonalDataMaskerTest {
 
     @Test
     void text_without_personal_data_is_returned_unchanged() {
-        String text = "Mon imprimante HP ne fonctionne plus depuis la mise à jour.";
+        var text = "Mon imprimante HP ne fonctionne plus depuis la mise à jour.";
         assertThat(masker.mask(text)).isEqualTo(text);
     }
 
@@ -108,7 +108,7 @@ class PersonalDataMaskerTest {
 
     @Test
     void all_personal_data_types_are_masked_in_combined_text() {
-        String text = "Contact : marie@banque.fr, tél 01 23 45 67 89, " +
+        var text = "Contact : marie@banque.fr, tél 01 23 45 67 89, " +
                 "IBAN DE89370400440532013000.";
         String result = masker.mask(text);
 

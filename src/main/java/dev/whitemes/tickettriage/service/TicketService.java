@@ -68,7 +68,7 @@ public class TicketService {
         log.info("[TRIAGE] Résultat en {} ms : catégorie={}, priorité={}, confiance={}",
                 elapsedMs, result.category(), result.priority(), result.confidence());
 
-        Ticket ticket = new Ticket();
+        var ticket = new Ticket();
         ticket.setRawText(rawText);
         ticket.setMaskedText(masked);
         ticket.setCategory(result.category());

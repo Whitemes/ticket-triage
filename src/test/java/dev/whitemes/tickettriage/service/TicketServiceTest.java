@@ -120,7 +120,7 @@ class TicketServiceTest {
 
     @Test
     void validateUpdatesTicketToValidated() {
-        Ticket existing = new Ticket();
+        var existing = new Ticket();
         existing.setId(1L);
         existing.setCategory(Category.OTHER);
         existing.setPriority(Priority.LOW);

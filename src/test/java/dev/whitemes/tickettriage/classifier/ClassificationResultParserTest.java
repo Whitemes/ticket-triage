@@ -15,7 +15,7 @@ class ClassificationResultParserTest {
 
     @Test
     void valid_json_is_converted_to_typed_result() {
-        String json = """
+        var json = """
                 {"category":"SOFTWARE","priority":"MEDIUM",
                  "summary":"Application crash au démarrage.",
                  "justification":"L'application ne répond plus après le lancement.",
@@ -33,7 +33,7 @@ class ClassificationResultParserTest {
 
     @Test
     void lower_case_enum_values_are_accepted() {
-        String json = """
+        var json = """
                 {"category":"network","priority":"high","summary":"VPN coupé.",
                  "justification":"Problème réseau.","confidence":0.9}
                 """;
@@ -53,7 +53,7 @@ class ClassificationResultParserTest {
 
     @Test
     void unknown_category_is_rejected() {
-        String json = """
+        var json = """
                 {"category":"UNKNOWN_CATEGORY","priority":"HIGH","summary":"Problème inconnu.",
                  "justification":"Catégorie fictive.","confidence":0.70}
                 """;
@@ -63,7 +63,7 @@ class ClassificationResultParserTest {
 
     @Test
     void unknown_priority_is_rejected() {
-        String json = """
+        var json = """
                 {"category":"NETWORK","priority":"SUPER_CRITICAL","summary":"Réseau coupé.",
                  "justification":"Coupure réseau.","confidence":0.80}
                 """;
@@ -73,7 +73,7 @@ class ClassificationResultParserTest {
 
     @Test
     void out_of_range_confidence_is_rejected() {
-        String json = """
+        var json = """
                 {"category":"NETWORK","priority":"LOW","summary":"Réseau lent.",
                  "justification":"Lenteur réseau.","confidence":95}
                 """;
@@ -83,7 +83,7 @@ class ClassificationResultParserTest {
 
     @Test
     void missing_summary_is_rejected() {
-        String json = """
+        var json = """
                 {"category":"NETWORK","priority":"LOW",
                  "justification":"Lenteur réseau.","confidence":0.8}
                 """;
@@ -93,7 +93,7 @@ class ClassificationResultParserTest {
 
     @Test
     void unknown_field_is_rejected() {
-        String json = """
+        var json = """
                 {"category":"NETWORK","priority":"LOW","summary":"Réseau lent.",
                  "justification":"Lenteur réseau.","confidence":0.8,"team":"Équipe Réseau"}
                 """;
