@@ -84,6 +84,20 @@ class TicketControllerTest {
     }
 
     @Test
+    void unknownTicketReturns404() throws Exception {
+        mockMvc.perform(get("/tickets/9999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void validatingUnknownTicketReturns404() throws Exception {
+        mockMvc.perform(post("/human-queue/9999/validate")
+                        .param("category", "NETWORK")
+                        .param("priority", "HIGH"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void getHumanQueueReturns200() throws Exception {
         mockMvc.perform(get("/human-queue"))
                 .andExpect(status().isOk())

@@ -9,6 +9,7 @@ import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.output.Response;
 import dev.whitemes.tickettriage.domain.Category;
 import dev.whitemes.tickettriage.domain.Priority;
+import dev.whitemes.tickettriage.exception.ClassificationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -159,11 +160,4 @@ public class GraniteClassifier implements TicketClassifier {
             String summary,
             String justification,
             double confidence) {}
-
-    /** Thrown when the model's JSON cannot be mapped to a valid {@link ClassificationResult}. */
-    public static class ClassificationException extends RuntimeException {
-        public ClassificationException(String message, Throwable cause) {
-            super(message, cause);
-        }
-    }
 }

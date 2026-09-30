@@ -97,7 +97,7 @@ H2 ne demande aucune installation et l'application se lance en une commande. Le 
 | `PersonalDataMaskerTest` | Masquage des e-mails, téléphones français et IBAN (compacts et espacés, égalité stricte), texte sans donnée personnelle inchangé, non-régression sur des codes techniques (SRV01, PC75, KB5034441, INC0012345, Office365, Win11). |
 | `TeamRouterTest` | Chaque catégorie a une équipe. |
 | `TicketServiceTest` | Décision de routage : au-dessus, en dessous et au niveau du seuil, CRITICAL toujours en file humaine, validation humaine, repli en file humaine sur erreur réseau et sur confiance hors de [0 ; 1]. |
-| `TicketControllerTest` | Contexte Spring complet (H2, FakeClassifier) : création d'un ticket, texte vague en file humaine, page du ticket avec le texte envoyé au modèle, validation redirigée vers le ticket en VALIDATED, pages d'accueil et de file humaine. |
+| `TicketControllerTest` | Contexte Spring complet (H2, FakeClassifier) : création d'un ticket, texte vague en file humaine, page du ticket avec le texte envoyé au modèle, validation redirigée vers le ticket en VALIDATED, réponse 404 pour un ticket inconnu (affichage et validation), pages d'accueil et de file humaine. |
 
 Hors `mvn verify`, `GraniteClassifierOllamaIT` interroge le vrai modèle (Ollama doit tourner) : `$env:OLLAMA_IT='true'; mvn test -Pollama-live`.
 

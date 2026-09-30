@@ -5,6 +5,7 @@ import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
 import dev.whitemes.tickettriage.domain.Category;
 import dev.whitemes.tickettriage.domain.Priority;
+import dev.whitemes.tickettriage.exception.ClassificationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -85,7 +86,7 @@ class GraniteClassifierTest {
         givenModelReturns("this is not json at all");
 
         assertThatThrownBy(() -> classifier.classify("Some ticket text"))
-                .isInstanceOf(GraniteClassifier.ClassificationException.class)
+                .isInstanceOf(ClassificationException.class)
                 .hasMessageContaining("Invalid model response");
     }
 
@@ -102,7 +103,7 @@ class GraniteClassifierTest {
         givenModelReturns(json);
 
         assertThatThrownBy(() -> classifier.classify("Some ticket"))
-                .isInstanceOf(GraniteClassifier.ClassificationException.class);
+                .isInstanceOf(ClassificationException.class);
     }
 
     // --- Degraded: unknown priority value ---
@@ -118,7 +119,7 @@ class GraniteClassifierTest {
         givenModelReturns(json);
 
         assertThatThrownBy(() -> classifier.classify("Réseau coupé"))
-                .isInstanceOf(GraniteClassifier.ClassificationException.class);
+                .isInstanceOf(ClassificationException.class);
     }
 
     // --- Degraded: response that breaks the ClassificationResult contract ---
@@ -134,7 +135,7 @@ class GraniteClassifierTest {
         givenModelReturns(json);
 
         assertThatThrownBy(() -> classifier.classify("Réseau lent"))
-                .isInstanceOf(GraniteClassifier.ClassificationException.class);
+                .isInstanceOf(ClassificationException.class);
     }
 
     @Test
@@ -147,7 +148,7 @@ class GraniteClassifierTest {
         givenModelReturns(json);
 
         assertThatThrownBy(() -> classifier.classify("Réseau lent"))
-                .isInstanceOf(GraniteClassifier.ClassificationException.class);
+                .isInstanceOf(ClassificationException.class);
     }
 
     // --- Constructor contract (no network call: the Ollama client is only built) ---

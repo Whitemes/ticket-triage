@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Erreur</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        nav a { margin-right: 1rem; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/">Soumettre un ticket</a>
+    <a href="/human-queue">File humaine</a>
+</nav>
+<hr/>
+<h1>Une erreur est survenue</h1>
+<p th:if="${status == 404}">La page ou le ticket demandé n'existe pas.</p>
+<p th:unless="${status == 404}">La requête n'a pas pu aboutir (code <span th:text="${status}">500</span>).</p>
+<p><a href="/">← Retour à l'accueil</a></p>
+</body>
+</html>

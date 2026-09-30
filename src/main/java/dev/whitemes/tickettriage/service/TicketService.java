@@ -4,6 +4,7 @@ import dev.whitemes.tickettriage.classifier.ClassificationResult;
 import dev.whitemes.tickettriage.classifier.PersonalDataMasker;
 import dev.whitemes.tickettriage.classifier.TicketClassifier;
 import dev.whitemes.tickettriage.domain.*;
+import dev.whitemes.tickettriage.exception.TicketNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -137,11 +138,11 @@ public class TicketService {
         return repository.findAll();
     }
 
-    /** Returns a single ticket by id, or throws if not found. */
+    /** Returns a single ticket by id, or throws {@link TicketNotFoundException} (HTTP 404) if not found. */
     @Transactional(readOnly = true)
     public Ticket getTicket(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Ticket introuvable : " + id));
+                .orElseThrow(() -> new TicketNotFoundException(id));
     }
 
     /**
